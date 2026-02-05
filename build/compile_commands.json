@@ -1,0 +1,37 @@
+[
+{
+  "directory": "/home/tz/workspace/wrj/build",
+  "command": "/usr/bin/clang++  -DDEBUG -I../include -I/usr/include/jsoncpp -isystem /usr/include/opencv4   -O0 -Wall -g   -Wall -Wextra -Wpedantic -std=c++17 -o CMakeFiles/uav_controller.dir/src/connect_uav.cpp.o -c /home/tz/workspace/wrj/src/connect_uav.cpp",
+  "file": "/home/tz/workspace/wrj/src/connect_uav.cpp"
+},
+
+{
+  "directory": "/home/tz/workspace/wrj/build",
+  "command": "/usr/bin/clang++  -DDEBUG -I../include -I/usr/include/jsoncpp -isystem /usr/include/opencv4   -O0 -Wall -g   -Wall -Wextra -Wpedantic -std=c++17 -o CMakeFiles/uav_controller.dir/src/line_follower.cpp.o -c /home/tz/workspace/wrj/src/line_follower.cpp",
+  "file": "/home/tz/workspace/wrj/src/line_follower.cpp"
+},
+
+{
+  "directory": "/home/tz/workspace/wrj/build",
+  "command": "/usr/bin/clang++  -DDEBUG -I../include -I/usr/include/jsoncpp -isystem /usr/include/opencv4   -O0 -Wall -g   -Wall -Wextra -Wpedantic -std=c++17 -o CMakeFiles/uav_controller.dir/src/main.cpp.o -c /home/tz/workspace/wrj/src/main.cpp",
+  "file": "/home/tz/workspace/wrj/src/main.cpp"
+},
+
+{
+  "directory": "/home/tz/workspace/wrj/build",
+  "command": "/usr/bin/clang++  -DDEBUG -I../include -I/usr/include/jsoncpp -isystem /usr/include/opencv4   -O0 -Wall -g   -Wall -Wextra -Wpedantic -std=c++17 -o CMakeFiles/uav_controller.dir/src/pid_r.cpp.o -c /home/tz/workspace/wrj/src/pid_r.cpp",
+  "file": "/home/tz/workspace/wrj/src/pid_r.cpp"
+},
+
+{
+  "directory": "/home/tz/workspace/wrj/build",
+  "command": "/usr/bin/clang++  -DDEBUG -I../include -I/usr/include/jsoncpp -isystem /usr/include/opencv4   -O0 -Wall -g   -Wall -Wextra -Wpedantic -std=c++17 -o CMakeFiles/uav_controller.dir/src/pid_t.cpp.o -c /home/tz/workspace/wrj/src/pid_t.cpp",
+  "file": "/home/tz/workspace/wrj/src/pid_t.cpp"
+},
+
+{
+  "directory": "/home/tz/workspace/wrj/build",
+  "command": "/usr/bin/clang++  -DDEBUG -I../include -I/usr/include/jsoncpp -isystem /usr/include/opencv4   -O0 -Wall -g   -Wall -Wextra -Wpedantic -std=c++17 -o CMakeFiles/uav_controller.dir/src/serial_helper.cpp.o -c /home/tz/workspace/wrj/src/serial_helper.cpp",
+  "file": "/home/tz/workspace/wrj/src/serial_helper.cpp"
+}
+]
