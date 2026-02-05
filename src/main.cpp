@@ -21,9 +21,9 @@ std::tuple<Serial, int> json_file_parse(const std::string &filepath)
         std::cerr << "Error: could not open file " << filepath << std::endl;
         return std::make_tuple(ser, camera_index);
     }
-    Json::Value root;                        // 所有JSON数据都存在Value中，可嵌套
-    Json::Reader reader;                     // 简易解析器
-    bool parse_ok = reader.parse(ifs, root); // 直接解析文件流，无需手动读缓冲区
+    Json::Value root;                      
+    Json::Reader reader;                    
+    bool parse_ok = reader.parse(ifs, root); 
 
     // 解析结果判断
     if (!parse_ok)
