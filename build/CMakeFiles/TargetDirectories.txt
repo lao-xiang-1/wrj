@@ -1,3 +1,0 @@
-/home/tz/workspace/wrj/build/CMakeFiles/rebuild_cache.dir
-/home/tz/workspace/wrj/build/CMakeFiles/edit_cache.dir
-/home/tz/workspace/wrj/build/CMakeFiles/uav_controller.dir

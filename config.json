@@ -1,8 +1,0 @@
-{
-    "port": "/dev/ttyUSB0",
-    "baudrate": 115200,
-    "bytesize": 8,
-    "parity": "N",
-    "stopbits": 1,
-    "camera_index": 0
-}
