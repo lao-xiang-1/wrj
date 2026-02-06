@@ -1,6 +1,7 @@
 #include "line_follower.hpp"
 #include <string.h>
 #include <jsoncpp/json/json.h>
+#include <filesystem>
 
 typedef struct
 {
@@ -21,9 +22,9 @@ std::tuple<Serial, int> json_file_parse(const std::string &filepath)
         std::cerr << "Error: could not open file " << filepath << std::endl;
         return std::make_tuple(ser, camera_index);
     }
-    Json::Value root;                      
-    Json::Reader reader;                    
-    bool parse_ok = reader.parse(ifs, root); 
+    Json::Value root;
+    Json::Reader reader;
+    bool parse_ok = reader.parse(ifs, root);
 
     // 解析结果判断
     if (!parse_ok)
@@ -120,15 +121,13 @@ int main(int argc, char **argv)
 
     if (argc == 1)
     {
-        std::ifstream ifs(("config.json"));
-        if (!ifs.is_open())
+        if (!std::filesystem::exists("config.json"))
         {
             LineFollower LF(lock);
             LF.run();
         }
         else
         {
-            ifs.close();
             auto [ser, camera_index] = json_file_parse("config.json");
             printf("Serial Port: %s\n", ser.Port.c_str());
             printf("Baud Rate: %u\n", ser.BaudRate);
