@@ -1,0 +1,1 @@
+sudo apt install libopencv-dev libserial-dev libjsoncpp-dev
