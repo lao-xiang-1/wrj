@@ -89,6 +89,9 @@ void LineFollower::run() {
   // 等待初始化完成
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
+  // 启动高度监听线程
+  airplanceApi.get_air_height();
+
   // 无人机起飞到60cm高度并悬停
   airplanceApi.onekey_takeoff(60);
   std::this_thread::sleep_for(std::chrono::seconds(1));

@@ -168,8 +168,13 @@ void UPUavControl::onekey_takeoff(uint8_t height) {
   Data data(1, 0);
   data[0] = height & 0xFF;
   std::tuple<Data, uint16_t> tu = generateCmd(0x55, 0x05, 0x01, data);
-  std::lock_guard<std::mutex> gard(lock);
-  msg_list.push(std::get<0>(tu));
+  //集成set_height函数
+  {
+      std::lock_guard<std::mutex> gard(lock);
+      msg_list.push(std::get<0>(tu));
+      settingHeight = height; // 设置目标高度
+      isFly = true;           // 允许发送高度查询指令
+  }
 }
 void UPUavControl::land() {
   isFly = false;
