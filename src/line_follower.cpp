@@ -5,6 +5,9 @@
 #include <cmath>
 #include <iostream>
 #include <thread>
+#include <atomic>
+
+extern std::atomic<bool> g_running;
 
 template <typename T>
 T clamp(const T &value, const T &min_val, const T &max_val) {
@@ -490,6 +493,7 @@ void LineFollower::start_video() {
   }
 
   for (;;) {
+    if (!g_running) break;
     auto start_time = std::chrono::high_resolution_clock::now();
     cv::Mat frame;
     cap >> frame;

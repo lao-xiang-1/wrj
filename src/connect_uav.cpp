@@ -19,17 +19,20 @@ UPUavControl::UPUavControl(std::mutex &lock, std::string Port,
     : lock(lock), ser(lock, Port, BaudRate, ByteSize, Parity, Stopbits) {}
 
 UPUavControl::~UPUavControl() noexcept {
+  _active = false;
   isFly = false;   // 停止高度线程
   _isConn = false; // 停止发送线程
+  if (send_thread.joinable()) send_thread.join();
+  if (height_thread.joinable()) height_thread.join();
 }
 
 void UPUavControl::run() {
   ser.on_connected_changed([this](bool connected) {
     this->myserial_on_connected_changed(connected);
   });
+  if (send_thread.joinable()) send_thread.join();
   send_thread = std::thread([this]() { this->send_msg(); });
   pthread_setname_np(send_thread.native_handle(), "send_thread");
-  send_thread.detach();
 }
 
 void UPUavControl::myserial_on_connected_changed(bool is_connected) {
@@ -50,7 +53,7 @@ void UPUavControl::myserial_on_connected_changed(bool is_connected) {
     ser.write(data, true);
 } */
 void UPUavControl::send_msg() {
-  for (;;) {
+  while (_active) {
     Data data_to_send;
     bool has_data_to_send = false;
     
@@ -191,9 +194,9 @@ void UPUavControl::land() {
 }
 
 void UPUavControl::get_air_height() {
+  if (height_thread.joinable()) height_thread.join();
   height_thread = std::thread([this]() { this->on_height_callback(); });
   pthread_setname_np(height_thread.native_handle(), "get_height");
-  height_thread.detach();
 }
 void UPUavControl::set_height(uint8_t height) {
   std::lock_guard<std::mutex> gard(lock);
@@ -202,7 +205,7 @@ void UPUavControl::set_height(uint8_t height) {
 }
 void UPUavControl::on_height_callback() {
   Data buffer(6, 0);
-  for (;;) {
+  while (_active) {
     if (_isConn && isFly) {
       buffer[0] = 0xF5;
       buffer[1] = 0x5F;

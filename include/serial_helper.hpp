@@ -25,6 +25,7 @@ public:
   SerialHelper(std::mutex &lock, std::string Port = "/dev/ttyUSB0",
                uint32_t BaudRate = 115200, uint8_t ByteSize = 8,
                char Parity = 'N', uint8_t Stopbits = 1);
+  ~SerialHelper();
   void connect(/* uint16_t timeout = 2 */);
   void disconnect();
   void write(const Data &data /* , bool isHex = false */);
@@ -36,6 +37,9 @@ private:
   LibSerial::SerialPort _serial;
   std::atomic<bool> _is_connected;
   std::atomic<bool> _is_connected_temp;
+  std::atomic<bool> _running{true};
+  std::thread _connect_thread;
+  std::thread _recv_thread;
   void _on_connected_changed(const ConnectedCallback &func);
   void _on_data_received(const DataReceived &func);
   // std::vector<std::string> find_usb_tty(uint16_t vendor_id = 0, uint16_t

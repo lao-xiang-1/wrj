@@ -55,6 +55,7 @@ private:
   SerialHelper ser;
 
   std::atomic<bool> _isConn{false};
+  std::atomic<bool> _active{true};
   PID_t pid;
   std::thread send_thread;
   std::thread height_thread;

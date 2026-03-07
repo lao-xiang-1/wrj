@@ -80,6 +80,17 @@ SerialHelper::SerialHelper(std::mutex &lock, std::string Port,
     }
 }
 
+SerialHelper::~SerialHelper() {
+    _running = false;
+    disconnect();
+    if (_connect_thread.joinable()) {
+        _connect_thread.join();
+    }
+    if (_recv_thread.joinable()) {
+        _recv_thread.join();
+    }
+}
+
 void SerialHelper::connect() {
     std::lock_guard<std::mutex> guard(lock);
     try {
@@ -128,17 +139,19 @@ void SerialHelper::write(const Data &data) {
 }
 
 void SerialHelper::on_connected_changed(const ConnectedCallback &func) {
+    if (_connect_thread.joinable()) {
+        _connect_thread.join();
+    }
     // 【修复3】不要用引用捕获 `&func` 传给分离的线程，改用值传递捕获 `func`
-    std::thread connect_thread([this, func]() { this->_on_connected_changed(func); });
+    _connect_thread = std::thread([this, func]() { this->_on_connected_changed(func); });
     // 【修复2】线程名字长度必须严格小于16个字符 (15字符+1结束符)
-    pthread_setname_np(connect_thread.native_handle(), "ser_conn_thread");
-    connect_thread.detach();
+    pthread_setname_np(_connect_thread.native_handle(), "ser_conn_thread");
 }
 
 void SerialHelper::_on_connected_changed(const ConnectedCallback &func) {
     _is_connected_temp = false;
 
-    for (;;) {
+    while (_running) {
         bool need_callback = false;
         bool current_status = false;
 
@@ -181,16 +194,18 @@ void SerialHelper::_on_connected_changed(const ConnectedCallback &func) {
 }
 
 void SerialHelper::on_data_received(const DataReceived &func) {
+    if (_recv_thread.joinable()) {
+        _recv_thread.join();
+    }
     // 【修复3】不要用引用捕获 `&func` 传给分离的线程，改用值传递捕获 `func`
-    std::thread tDataReceived([this, func]() { this->_on_data_received(func); });
+    _recv_thread = std::thread([this, func]() { this->_on_data_received(func); });
     // 【修复2】缩短线程名避免越界失败
-    pthread_setname_np(tDataReceived.native_handle(), "ser_recv_thread");
-    tDataReceived.detach(); // 后台线程
+    pthread_setname_np(_recv_thread.native_handle(), "ser_recv_thread");
 }
 
 // 串口数据接收线程
 void SerialHelper::_on_data_received(const DataReceived &func) {
-    for (;;) {
+    while (_running) {
         bool has_data = false;
         Data received_data;
 

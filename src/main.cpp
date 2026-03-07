@@ -1,7 +1,27 @@
 #include "line_follower.hpp"
-#include <filesystem>
 #include <jsoncpp/json/json.h>
 #include <string.h>
+#include <csignal>
+
+// GCC 8及以下版本可能需要 experimental
+#if __has_include(<filesystem>)
+  #include <filesystem>
+  namespace fs = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+  #include <experimental/filesystem>
+  namespace fs = std::experimental::filesystem;
+#else
+  #error "Could not find <filesystem> or <experimental/filesystem>"
+#endif
+
+// 全局标志，用于处理信号
+std::atomic<bool> g_running{true};
+
+void signal_handler(int signal) {
+  if (signal == SIGINT) {
+    g_running = false;
+  }
+}
 
 typedef struct {
   std::string Port;
@@ -20,13 +40,14 @@ std::tuple<Serial, int> json_file_parse(const std::string &filepath) {
     return std::make_tuple(ser, camera_index);
   }
   Json::Value root;
-  Json::Reader reader;
-  bool parse_ok = reader.parse(ifs, root);
+  Json::CharReaderBuilder builder;
+  std::string errs;
+  bool parse_ok = Json::parseFromStream(builder, ifs, &root, &errs);
 
   // 解析结果判断
   if (!parse_ok) {
     std::cerr << "Error: parse json failed -> "
-              << reader.getFormattedErrorMessages() << std::endl;
+              << errs << std::endl;
     ifs.close();
     return std::make_tuple(ser, camera_index);
   }
@@ -96,10 +117,11 @@ std::tuple<Serial, int> parameter_parse(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+  std::signal(SIGINT, signal_handler);
   std::mutex lock;
 
   if (argc == 1) {
-    if (!std::filesystem::exists("config.json")) {
+    if (!fs::exists("config.json")) {
       LineFollower LF(lock);
       LF.run();
     } else {
