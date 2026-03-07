@@ -126,7 +126,7 @@ private:
    * @param center 图像中心
    * @param cont_cent 各块轮廓中心列表
    */
-  void line(const cv::Mat &image, const cv::Point &center,
+  void line(cv::Mat &image, const cv::Point &center,
             const std::vector<cv::Point> &cont_cent);
 
   /**

@@ -150,31 +150,38 @@ LineFollower::get_contour_center(const std::vector<cv::Point> &contour) {
 }
 
 std::pair<cv::Mat, cv::Point> LineFollower::process(const cv::Mat &image) {
-  cv::Mat thresh;
-  // 二值化（反相）
-  cv::threshold(image, thresh, 100, 255, cv::THRESH_BINARY_INV);
-
-  // 查找轮廓
-  std::vector<std::vector<cv::Point>> contours;
-  cv::findContours(thresh, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
-
   cv::Mat result = image.clone();
   cv::Point contour_center(0, 0);
 
-  if (!contours.empty()) {
-    // 找最大轮廓
-    auto main_contour = *std::max_element(
-        contours.begin(), contours.end(),
-        [](const std::vector<cv::Point> &a, const std::vector<cv::Point> &b) {
-          return cv::contourArea(a) < cv::contourArea(b);
-        });
-
-    // 绘制轮廓和中心
-    cv::drawContours(result, {main_contour}, -1, cv::Scalar(150, 150, 150), 2);
-    contour_center = get_contour_center(main_contour);
-    cv::circle(result, contour_center, 2, cv::Scalar(150, 150, 150), 2);
+  // 增加 try-catch 定位 process 内部错误
+  try {
+      cv::Mat thresh;
+      // 二值化（反相）
+      cv::threshold(image, thresh, 100, 255, cv::THRESH_BINARY_INV);
+    
+      // 查找轮廓
+      std::vector<std::vector<cv::Point>> contours;
+      cv::findContours(thresh, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+    
+      if (!contours.empty()) {
+        // 找最大轮廓
+        auto main_contour = *std::max_element(
+            contours.begin(), contours.end(),
+            [](const std::vector<cv::Point> &a, const std::vector<cv::Point> &b) {
+              return cv::contourArea(a) < cv::contourArea(b);
+            });
+    
+        // 绘制轮廓和中心
+        std::vector<std::vector<cv::Point>> contours_to_draw;
+        contours_to_draw.push_back(main_contour);
+        // 使用 result (image.clone) 作为绘制目标
+        cv::drawContours(result, contours_to_draw, -1, cv::Scalar(150, 150, 150), 2);
+        contour_center = get_contour_center(main_contour);
+        cv::circle(result, contour_center, 2, cv::Scalar(150, 150, 150), 2);
+      }
+  } catch (const cv::Exception& e) {
+      std::cerr << "OpenCV Exception in process(): " << e.what() << std::endl;
   }
-
   return {result, contour_center};
 }
 
@@ -349,7 +356,7 @@ void LineFollower::decode(const cv::Mat &image) {
   std::cout << "[QR] 识别耗时: " << qr_time << "s" << std::endl;
 }
 
-void LineFollower::line(const cv::Mat &image, const cv::Point &center,
+void LineFollower::line(cv::Mat &image, const cv::Point &center,
                         const std::vector<cv::Point> &cont_cent) {
   // 绘制分割线（可视化）
   cv::line(image, cv::Point(0, 65), cv::Point(480, 65), cv::Scalar(30, 30, 30),
@@ -493,82 +500,87 @@ void LineFollower::start_video() {
   }
 
   for (;;) {
-    if (!g_running) break;
-    auto start_time = std::chrono::high_resolution_clock::now();
-    cv::Mat frame;
-    cap >> frame;
+    try { 
+        if (!g_running) break;
+        auto start_time = std::chrono::high_resolution_clock::now();
+        cv::Mat frame;
+        cap >> frame;
 
-    if (frame.empty())
-      break;
-
-    // 缩放图像（0.75倍）
-    cv::resize(frame, frame, cv::Size(), 0.75, 0.75);
-
-    // ---------------- 红色圆点识别 ----------------
-    get_red = false;
-    cv::Mat red_img = detect_red_by_rgb_diff(frame);
-    std::vector<std::vector<cv::Point>> cnts;
-    cv::findContours(red_img, cnts, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-    if (!cnts.empty()) {
-      // 找最大红色轮廓
-      auto cnt = *std::max_element(
-          cnts.begin(), cnts.end(),
-          [](const std::vector<cv::Point> &a, const std::vector<cv::Point> &b) {
-            return cv::contourArea(a) < cv::contourArea(b);
-          });
-
-      // 最小外接圆
-      cv::Point2f center_red;
-      float radius;
-      cv::minEnclosingCircle(cnt, center_red, radius);
-
-      // 过滤有效红色圆点
-      if (radius > 20 && center_red.y > 0 && center_red.y < 250) {
-        std::cout << "[RED] 识别到红色圆点" << std::endl;
-        cv::circle(red_img, center_red, static_cast<int>(radius),
-                   cv::Scalar(0, 250, 0), -1);
-        get_red = true;
-        is_decode = true; // 启动二维码识别
-      }
+        if (frame.empty())
+          break;
+    
+        // 缩放图像（0.75倍）
+        cv::resize(frame, frame, cv::Size(), 0.75, 0.75);
+    
+        // ---------------- 红色圆点识别 ----------------
+        get_red = false;
+        cv::Mat red_img = detect_red_by_rgb_diff(frame);
+        std::vector<std::vector<cv::Point>> cnts;
+        cv::findContours(red_img, cnts, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    
+        if (!cnts.empty()) {
+          // 找最大红色轮廓
+          auto cnt = *std::max_element(
+              cnts.begin(), cnts.end(),
+              [](const std::vector<cv::Point> &a, const std::vector<cv::Point> &b) {
+                return cv::contourArea(a) < cv::contourArea(b);
+              });
+    
+          // 最小外接圆
+          cv::Point2f center_red;
+          float radius;
+          cv::minEnclosingCircle(cnt, center_red, radius);
+    
+          // 过滤有效红色圆点
+          if (radius > 20 && center_red.y > 0 && center_red.y < 250) {
+            std::cout << "[RED] 识别到红色圆点" << std::endl;
+            // 修复：在单通道掩膜上画图只能用单灰度值
+            cv::circle(red_img, center_red, static_cast<int>(radius),
+                       cv::Scalar(255), -1);
+            get_red = true;
+            is_decode = true; // 启动二维码识别
+          }
+        }
+    
+        // ---------------- 二维码识别 ----------------
+        cv::Mat gray_frame;
+        cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY);
+        if (is_decode && !is_code_center) {
+          decode(frame);
+        }
+    
+        // ---------------- 二维码降落判定 ----------------
+        if (scan_content == "landed" && is_code_center) {
+          is_follow = false;
+          is_forward = false;
+          airplanceApi.move(0, 0, 0, 0);
+          airplanceApi.land();
+          break; // 降落完成，退出循环
+        }
+    
+        // ---------------- 黑线识别 ----------------
+        cv::Mat img = remove_background(gray_frame, true);
+        auto [slices, cont_cent] = slice_out(img, no_slice);
+        img = repack(slices);
+        if (!get_qr) {
+          line(img, center, cont_cent);
+        }
+    
+        // ---------------- 可视化显示 ----------------
+        cv::imshow("frame", img);
+        cv::imshow("scan", frame);
+    
+        // ---------------- 耗时统计 ----------------
+        auto end_time = std::chrono::high_resolution_clock::now();
+        timing = std::chrono::duration<double>(end_time - start_time).count();
+        std::cout << "[TIME] 单次循环耗时: " << timing << "s" << std::endl;
+    
+        // 退出按键：q
+        if (cv::waitKey(1) == 'q')
+          break;
+    } catch (const cv::Exception& e) {
+        std::cerr << "OpenCV Exception in main loop: " << e.what() << std::endl;
     }
-
-    // ---------------- 二维码识别 ----------------
-    cv::Mat gray_frame;
-    cv::cvtColor(frame, gray_frame, cv::COLOR_BGR2GRAY);
-    if (is_decode && !is_code_center) {
-      decode(frame);
-    }
-
-    // ---------------- 二维码降落判定 ----------------
-    if (scan_content == "landed" && is_code_center) {
-      is_follow = false;
-      is_forward = false;
-      airplanceApi.move(0, 0, 0, 0);
-      airplanceApi.land();
-      break; // 降落完成，退出循环
-    }
-
-    // ---------------- 黑线识别 ----------------
-    cv::Mat img = remove_background(gray_frame, true);
-    auto [slices, cont_cent] = slice_out(img, no_slice);
-    img = repack(slices);
-    if (!get_qr) {
-      line(img, center, cont_cent);
-    }
-
-    // ---------------- 可视化显示 ----------------
-    cv::imshow("frame", img);
-    cv::imshow("scan", frame);
-
-    // ---------------- 耗时统计 ----------------
-    auto end_time = std::chrono::high_resolution_clock::now();
-    timing = std::chrono::duration<double>(end_time - start_time).count();
-    std::cout << "[TIME] 单次循环耗时: " << timing << "s" << std::endl;
-
-    // 退出按键：q
-    if (cv::waitKey(1) == 'q')
-      break;
   }
 
   // 释放资源
