@@ -51,7 +51,8 @@ public:
   void run(void);
 
 private:
-  std::mutex &lock;
+  std::mutex uav_lock;
+  std::mutex& lock;
   SerialHelper ser;
 
   std::atomic<bool> _isConn{false};

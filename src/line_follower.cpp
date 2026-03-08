@@ -357,8 +357,7 @@ void LineFollower::decode(const cv::Mat &image) {
   std::cout << "[QR] 识别耗时: " << qr_time << "s" << std::endl;
 }
 
-void LineFollower::line(cv::Mat &image, const cv::Point &center,
-                        const std::vector<cv::Point> &cont_cent) {
+void LineFollower::line(cv::Mat &image, const cv::Point &center,const std::vector<cv::Point> &cont_cent) {
   // 绘制分割线（可视化）
   cv::line(image, cv::Point(0, 65), cv::Point(480, 65), cv::Scalar(30, 30, 30),
            1);

@@ -16,7 +16,7 @@
 UPUavControl::UPUavControl(std::mutex &lock, std::string Port,
                            uint32_t BaudRate, uint8_t ByteSize, char Parity,
                            uint8_t Stopbits)
-    : lock(lock), ser(lock, Port, BaudRate, ByteSize, Parity, Stopbits) {}
+    :lock(lock),ser(lock, Port, BaudRate, ByteSize, Parity, Stopbits) {}
 
 UPUavControl::~UPUavControl() noexcept {
   isFly = false;   // 停止高度线程
@@ -57,7 +57,7 @@ void UPUavControl::send_msg() {
 
     // 只把 msg_list 的读/写操作限制在锁作用域内
     {
-      std::lock_guard<std::mutex> gard(lock);
+      std::lock_guard<std::mutex> gard(uav_lock);
       if (msg_list.size() > 0 && _isConn) {
         msg = msg_list.front();
         msg_list.pop();
@@ -73,7 +73,7 @@ void UPUavControl::send_msg() {
 
 #ifdef DEBUG
     else {
-      std::lock_guard<std::mutex> gard(lock);
+      std::lock_guard<std::mutex> gard(uav_lock);
       if (msg_list.size() > 0 && !_isConn) {
         auto msg_copy = msg_list;
         printf("Serial is not connected, data will not be sent!\n");
@@ -126,12 +126,12 @@ void UPUavControl::setMoveAction(int16_t y, int16_t x, int16_t z, int16_t yaw) {
   std::tuple<Data, uint16_t> tu = generateCmd(0x55, 0x01, 0x08, data);
   Data buffer = std::get<0>(tu);
   // uint16_t len = std::get<1>(tu);
-  std::lock_guard<std::mutex> gard(lock);
+  std::lock_guard<std::mutex> gard(uav_lock);
   msg_list.push(buffer);
 }
 
 int UPUavControl::get_current_height() {
-  std::lock_guard<std::mutex> gard(lock);
+  std::lock_guard<std::mutex> gard(uav_lock);
   return current_height.load();
 }
 void UPUavControl::setServoPosition(uint16_t angel) {
@@ -139,7 +139,7 @@ void UPUavControl::setServoPosition(uint16_t angel) {
   data[0] = angel & 0xFF;
   data[1] = (angel >> 8) & 0xFF;
   std::tuple<Data, uint16_t> tu = generateCmd(0x55, 0x03, 0x02, data);
-  std::lock_guard<std::mutex> gard(lock);
+  std::lock_guard<std::mutex> gard(uav_lock);
   msg_list.push(std::get<0>(tu));
 }
 void UPUavControl::move_forward(int16_t speed) {
@@ -168,7 +168,7 @@ void UPUavControl::onekey_takeoff(uint8_t height) {
   std::tuple<Data, uint16_t> tu = generateCmd(0x55, 0x05, 0x01, data);
   //集成set_height函数
   {
-      std::lock_guard<std::mutex> gard(lock);
+      std::lock_guard<std::mutex> gard(uav_lock);
       msg_list.push(std::get<0>(tu));
       settingHeight = height; // 设置目标高度
       isFly = true;           // 允许发送高度查询指令
@@ -183,7 +183,7 @@ void UPUavControl::land() {
   buffer[3] = 0x06;
   buffer[4] = 0;
   buffer[5] = 0xA4;
-  std::lock_guard<std::mutex> gard(lock);
+  std::lock_guard<std::mutex> gard(uav_lock);
   msg_list.push(buffer);
   msg_list.push(buffer);
 }
@@ -194,7 +194,7 @@ void UPUavControl::get_air_height() {
   height_thread.detach();
 }
 void UPUavControl::set_height(uint8_t height) {
-  std::lock_guard<std::mutex> gard(lock);
+  std::lock_guard<std::mutex> gard(uav_lock);
   settingHeight = height;
   isFly = true;
 }
@@ -209,7 +209,7 @@ void UPUavControl::on_height_callback() {
       buffer[4] = 0;
       buffer[5] = 0xA8;
       {
-        std::lock_guard<std::mutex> gard(lock);
+        std::lock_guard<std::mutex> gard(uav_lock);
         msg_list.push(buffer);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -221,8 +221,9 @@ void UPUavControl::on_height_callback() {
 void UPUavControl::on_data_received(Data &data) {
   std::lock_guard<std::mutex> gard(lock);
   if (data[2] == 0x55 && data[3] == 0x06) {
-    printf("%d", data[5]);
-  } else if (data[2] == 0x55 && data[3] == 0x02 && settingHeight != 0) {
+    printf("%d\n", data[5]);
+  } 
+  else if (data[2] == 0x55 && data[3] == 0x02 && settingHeight != 0) {
     uint32_t height = ((data[5] & 0xFF) | ((data[6] & 0xFF) << 8) |
                        ((data[7] & 0xFF) << 16) | ((data[8] & 0xFF) << 24));
     current_height = height;
@@ -245,7 +246,7 @@ void UPUavControl::on_data_received(Data &data) {
       } else if (int64_t(height) - int16_t(settingHeight) > 0) {
         move_down(speed);
       }
-      printf("height: %d speed: %d", height, speed);
+      printf("height: %d speed: %d\n", height, speed);
     }
   }
 }
