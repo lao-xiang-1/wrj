@@ -60,28 +60,46 @@ void UPUavControl::send_msg()
 {
      for (;;)
      {
-          if (msg_list.size() > 0 && _isConn)
+          Data msg;
+          bool has_message = false;
+
+          // 只把 msg_list 的读/写操作限制在锁作用域内
           {
                std::lock_guard<std::mutex> gard(lock);
-               ser.write(msg_list.front() /* , false */);
-               DATA_LOG(msg_list.front());
-               msg_list.pop();
-          }
-#ifdef DEBUG
-          else if (msg_list.size() > 0 && !_isConn)
-          {
-               auto msg = msg_list;
-               printf("Serial is not connected, data will not be sent!\n");
-               printf("Data in msg_list:\n");
-               std::lock_guard<std::mutex> gard(lock);
-               while (!msg.empty())
+               if (msg_list.size() > 0 && _isConn)
                {
-                    DATA_LOG(msg.front());
-                    msg.pop();
+                    msg = msg_list.front();
+                    msg_list.pop();
+                    has_message = true;
                }
-               std::this_thread::sleep_for(std::chrono::microseconds(500));
+          }
+
+          // 串口写操作在无锁时执行，避免死锁
+          if (has_message)
+          {
+               ser.write(msg /* , false */);
+               DATA_LOG(msg);
+          }
+
+#ifdef DEBUG
+          else
+          {
+               std::lock_guard<std::mutex> gard(lock);
+               if (msg_list.size() > 0 && !_isConn)
+               {
+                    auto msg_copy = msg_list;
+                    printf("Serial is not connected, data will not be sent!\n");
+                    printf("Data in msg_list:\n");
+                    while (!msg_copy.empty())
+                    {
+                         DATA_LOG(msg_copy.front());
+                         msg_copy.pop();
+                    }
+                    std::this_thread::sleep_for(std::chrono::microseconds(500));
+               }
           }
 #endif
+
           std::this_thread::sleep_for(std::chrono::milliseconds(10));
      }
 }
