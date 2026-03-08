@@ -24,6 +24,7 @@ UPUavControl::~UPUavControl() noexcept {
   _isConn = false; // 停止发送线程
   if (send_thread.joinable()) send_thread.join();
   if (height_thread.joinable()) height_thread.join();
+  ser.~SerialHelper();
 }
 
 void UPUavControl::run() {
@@ -218,6 +219,8 @@ void UPUavControl::on_height_callback() {
         msg_list.push(buffer);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    } else {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Maintain low CPU usage when not flying
     }
   }
 }

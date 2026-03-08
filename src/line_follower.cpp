@@ -37,6 +37,7 @@ LineFollower::~LineFollower() {
   if (cap.isOpened())
     cap.release();
   cv::destroyAllWindows();
+  airplanceApi.~UPUavControl();
 }
 
 // ---------------- 私有成员函数实现 ----------------
